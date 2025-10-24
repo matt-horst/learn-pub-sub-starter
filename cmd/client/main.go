@@ -38,7 +38,7 @@ func main() {
 		routing.ExchangePerilDirect,
 		fmt.Sprintf("%s.%s", routing.PauseKey, userName),
 		routing.PauseKey,
-		pubsub.QueueTypeTransient,
+		pubsub.Transient,
 		handlerPause(gameState),
 	)
 	if err != nil {
@@ -51,7 +51,7 @@ func main() {
 		routing.ExchangePerilTopic,
 		fmt.Sprintf("%s.%s", routing.ArmyMovesPrefix, userName),
 		fmt.Sprintf("%s.*", routing.ArmyMovesPrefix),
-		pubsub.QueueTypeTransient,
+		pubsub.Transient,
 		handlerArmyMove(gameState),
 	)
 	if err != nil {
@@ -115,18 +115,28 @@ func main() {
 	fmt.Println("Server shutting down...")
 }
 
-func handlerPause(gameState *gamelogic.GameState) func(routing.PlayingState) {
-	return func(playingState routing.PlayingState) {
+func handlerPause(gameState *gamelogic.GameState) func(routing.PlayingState) pubsub.AckType {
+	return func(playingState routing.PlayingState) pubsub.AckType {
 		defer fmt.Print("> ")
 
 		gameState.HandlePause(playingState)
+
+		return pubsub.Ack
 	}
 }
 
-func handlerArmyMove(gameState *gamelogic.GameState) func(gamelogic.ArmyMove) {
-	return func(move gamelogic.ArmyMove) {
+func handlerArmyMove(gameState *gamelogic.GameState) func(gamelogic.ArmyMove) pubsub.AckType {
+	return func(move gamelogic.ArmyMove) pubsub.AckType {
 		defer fmt.Print("> ")
 
-		gameState.HandleMove(move)
+		result := gameState.HandleMove(move)
+		switch result {
+		case gamelogic.MoveOutComeSafe, gamelogic.MoveOutcomeMakeWar:
+			return pubsub.Ack
+		case gamelogic.MoveOutcomeSamePlayer:
+			return pubsub.NackDiscard
+		default:
+			return pubsub.NackDiscard
+		}
 	}
 }

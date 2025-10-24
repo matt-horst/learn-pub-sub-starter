@@ -32,7 +32,7 @@ func main() {
 		routing.ExchangePerilTopic,
 		routing.GameLogSlug,
 		fmt.Sprintf("%s.*", routing.GameLogSlug),
-		pubsub.QueueTypeDurable,
+		pubsub.Durable,
 	)
 	if err != nil {
 		log.Fatalln("Failed to declare and bind to topic exchange")

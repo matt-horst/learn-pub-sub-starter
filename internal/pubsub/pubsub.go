@@ -12,8 +12,15 @@ import (
 type SimpleQueueType int
 
 const (
-	QueueTypeDurable SimpleQueueType = iota
-	QueueTypeTransient
+	Durable SimpleQueueType = iota
+	Transient
+)
+
+type AckType int
+const (
+	Ack AckType = iota
+	NackRequeue
+	NackDiscard
 )
 
 func PublishJSON[T any] (ch *ampq.Channel, exchange, key string, val T) error {
@@ -52,9 +59,9 @@ func DeclareAndBind(
 		return nil, ampq.Queue{}, fmt.Errorf("Failed to create channel: %v", err)
 	}
 
-	isDurable := queueType == QueueTypeDurable
-	isAutoDelete := queueType == QueueTypeTransient
-	isExclusive := queueType == QueueTypeTransient
+	isDurable := queueType == Durable
+	isAutoDelete := queueType == Transient
+	isExclusive := queueType == Transient
 	q, err := ch.QueueDeclare(queueName, isDurable, isAutoDelete, isExclusive, false, nil)
 	if err != nil {
 		return nil, ampq.Queue{}, fmt.Errorf("Failed to declare queue: %v", err)
@@ -74,7 +81,7 @@ func SubscribeJSON[T any] (
 	queueName string,
 	key string,
 	queueType SimpleQueueType,
-	handler func(T),
+	handler func(T) AckType,
 ) error {
 	ch, _, err := DeclareAndBind(conn, exchange, queueName, key, queueType)
 	if err != nil {
@@ -95,13 +102,37 @@ func SubscribeJSON[T any] (
 				continue
 			}
 
-			handler(t)
+			ack := handler(t)
 
-			err = d.Ack(false)
-			if err != nil {
-				log.Printf("Failed to ack delivery: %v", err)
-				continue
+			switch ack {
+			case Ack:
+				fmt.Println("Message delivered: Ack")
+				err = d.Ack(false)
+				if err != nil {
+					log.Printf("Failed to ack delivery: %v", err)
+					continue
+				}
+
+			case NackRequeue:
+				fmt.Println("Message delivered: NackRequeue")
+				err = d.Nack(false, true)
+				if err != nil {
+					log.Printf("Failed to nack delivery: %v", err)
+					continue
+				}
+
+			case NackDiscard:
+				fmt.Println("Message delivered: NackDiscard")
+				err = d.Nack(false, false)
+				if err != nil {
+					log.Printf("Failed to nack delivery: %v", err)
+					continue
+				}
+
 			}
+
+
+
 		}
 	} ()
 
