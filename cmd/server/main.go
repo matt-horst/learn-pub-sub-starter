@@ -32,6 +32,17 @@ func main() {
 		log.Fatalln("Failed to publish pause")
 	}
 
+	_, _, err =pubsub.DeclareAndBind(
+		conn,
+		routing.ExchangePerilTopic,
+		routing.GameLogSlug,
+		fmt.Sprintf("%s.*", routing.GameLogSlug),
+		pubsub.QueueTypeDurable,
+	)
+	if err != nil {
+		log.Fatalln("Failed to declare and bind to topic exchange")
+	}
+
 	gamelogic.PrintServerHelp()
 
 	done := false
