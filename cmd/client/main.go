@@ -3,9 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
-
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
@@ -39,9 +36,48 @@ func main() {
 		log.Fatalln("Failed to declare and bind transient queue")
 	}
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt)
-	<- sigCh
+	gameState := gamelogic.NewGameState(userName)
+
+	done := false
+	for !done {
+		input := gamelogic.GetInput()
+
+		if len(input) < 1 {
+			continue
+		}
+
+		cmd := input[0]
+		switch cmd {
+		case "spawn":
+			err := gameState.CommandSpawn(input)
+			if err != nil {
+				fmt.Printf("Couldn't spawn unit: %v\n", err)
+				continue
+			}
+
+		case "move":
+			_, err := gameState.CommandMove(input)
+			if err != nil {
+				fmt.Printf("Couldn't move units%v\n", err)
+				continue
+			}
+
+		case "status":
+			gameState.CommandStatus()
+
+		case "help":
+			gamelogic.PrintClientHelp()
+
+		case "spam":
+			fmt.Println("Spamming not allowed yet!")
+
+		case "quit":
+			gamelogic.PrintQuit()
+			done = true
+		default:
+			fmt.Printf("Unrecognized command: %v\n", cmd)
+		}
+	}
 
 	fmt.Println("Server shutting down...")
 }
