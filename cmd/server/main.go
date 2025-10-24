@@ -16,7 +16,7 @@ func main() {
 	url := "amqp://guest:guest@localhost:5672/"
 	conn, err := amqp.Dial(url)
 	if err != nil {
-		log.Fatal("Failed to connect to rabbitmq")
+		log.Fatalf("Failed to connect to rabbitmq: %v\n", err)
 	}
 	defer conn.Close()
 
@@ -24,7 +24,7 @@ func main() {
 
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Fatal("Failed to create channel")
+		log.Fatalf("Failed to create channel: %v\n", err)
 	}
 
 	_, _, err =pubsub.DeclareAndBind(
@@ -35,7 +35,7 @@ func main() {
 		pubsub.Durable,
 	)
 	if err != nil {
-		log.Fatalln("Failed to declare and bind to topic exchange")
+		log.Fatalf("Failed to declare and bind to topic exchange: %v\n", err)
 	}
 
 	gamelogic.PrintServerHelp()
@@ -53,7 +53,7 @@ func main() {
 			state := routing.PlayingState{IsPaused: true}
 			err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, state)
 			if err != nil {
-				log.Fatalln("Failed to publish pause")
+				log.Fatalf("Failed to publish pause: %v\n", err)
 			}
 			fmt.Println("Pause message sent!")
 
@@ -62,7 +62,7 @@ func main() {
 			state := routing.PlayingState{IsPaused: false}
 			err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, state)
 			if err != nil {
-				log.Fatalln("Failed to publish pause")
+				log.Fatalf("Failed to publish pause: %v\n", err)
 			}
 			fmt.Println("Resume message sent!")
 		case "quit":

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	ampq "github.com/rabbitmq/amqp091-go"
 )
 
@@ -62,7 +63,8 @@ func DeclareAndBind(
 	isDurable := queueType == Durable
 	isAutoDelete := queueType == Transient
 	isExclusive := queueType == Transient
-	q, err := ch.QueueDeclare(queueName, isDurable, isAutoDelete, isExclusive, false, nil)
+	table := ampq.Table {"x-dead-letter-exchange": routing.ExchangePerilDlx}
+	q, err := ch.QueueDeclare(queueName, isDurable, isAutoDelete, isExclusive, false, table)
 	if err != nil {
 		return nil, ampq.Queue{}, fmt.Errorf("Failed to declare queue: %v", err)
 	}
@@ -130,9 +132,6 @@ func SubscribeJSON[T any] (
 				}
 
 			}
-
-
-
 		}
 	} ()
 
