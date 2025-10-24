@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	ampq "github.com/rabbitmq/amqp091-go"
 )
@@ -36,6 +37,8 @@ func PublishJSON[T any] (ch *ampq.Channel, exchange, key string, val T) error {
 		return fmt.Errorf("Failed to publish: %v", err)
 	}
 
+	fmt.Printf("Publishing json: %v\n", string(json))
+
 	return nil
 }
 
@@ -59,5 +62,50 @@ func DeclareAndBind(
 		return nil, ampq.Queue{}, fmt.Errorf("Failed to declare queue: %v", err)
 	}
 
+	err = ch.QueueBind(queueName, key, exchange, false, nil)
+	if err != nil {
+		return nil, ampq.Queue{}, fmt.Errorf("Failed to bind queue: %v", err)
+	}
+
 	return ch, q, nil
+}
+
+func SubscribeJSON[T any] (
+	conn *ampq.Connection,
+	exchange string,
+	queueName string,
+	key string,
+	queueType SimpleQueueType,
+	handler func(T),
+) error {
+	ch, _, err := DeclareAndBind(conn, exchange, queueName, key, queueType)
+	if err != nil {
+		return fmt.Errorf("Failed to declare and bind: %v", err)
+	}
+
+	ds, err := ch.Consume(queueName, "", false, false, false, false, nil)
+	if err != nil {
+		return fmt.Errorf("Failed to consume queue: %v", err)
+	}
+
+	go func() {
+		for d := range ds {
+			var t T
+			err := json.Unmarshal(d.Body, &t)
+			if err != nil {
+				log.Printf("Failed to decode json: %v", err)
+				continue
+			}
+
+			handler(t)
+
+			err = d.Ack(false)
+			if err != nil {
+				log.Printf("Failed to ack delivery: %v", err)
+				continue
+			}
+		}
+	} ()
+
+	return nil
 }

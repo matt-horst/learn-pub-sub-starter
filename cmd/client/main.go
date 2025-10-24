@@ -24,19 +24,19 @@ func main() {
 		log.Fatalln("Failed to get valid username")
 	}
 
-	_, _, err = pubsub.DeclareAndBind(
+	gameState := gamelogic.NewGameState(userName)
+
+	err = pubsub.SubscribeJSON(
 		conn,
 		routing.ExchangePerilDirect,
 		fmt.Sprintf("%s.%s", routing.PauseKey, userName),
 		routing.PauseKey,
 		pubsub.QueueTypeTransient,
+		handlerPause(gameState),
 	)
-
 	if err != nil {
-		log.Fatalln("Failed to declare and bind transient queue")
+		log.Fatalln("Failed to subscribe to pause")
 	}
-
-	gameState := gamelogic.NewGameState(userName)
 
 	done := false
 	for !done {
@@ -80,4 +80,13 @@ func main() {
 	}
 
 	fmt.Println("Server shutting down...")
+}
+
+func handlerPause(gameState *gamelogic.GameState) func(routing.PlayingState) {
+	return func(playingState routing.PlayingState) {
+		defer fmt.Print("> ")
+
+		fmt.Println("pausing game...")
+		gameState.HandlePause(playingState)
+	}
 }

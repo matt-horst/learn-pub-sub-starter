@@ -27,11 +27,6 @@ func main() {
 		log.Fatal("Failed to create channel")
 	}
 
-	err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})
-	if err != nil {
-		log.Fatalln("Failed to publish pause")
-	}
-
 	_, _, err =pubsub.DeclareAndBind(
 		conn,
 		routing.ExchangePerilTopic,
