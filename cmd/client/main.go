@@ -143,16 +143,25 @@ func handlerArmyMove(gameState *gamelogic.GameState, ch *ampq.Channel) func(game
 
 		result := gameState.HandleMove(move)
 		switch result {
-		case gamelogic.MoveOutComeSafe, gamelogic.MoveOutcomeMakeWar:
+		case gamelogic.MoveOutComeSafe:
 			return pubsub.Ack
-		case gamelogic.MoveOutcomeSamePlayer:
-			pubsub.PublishJSON(
+
+		case gamelogic.MoveOutcomeMakeWar:
+			err := pubsub.PublishJSON(
 				ch,
 				routing.ExchangePerilTopic,
 				fmt.Sprintf("%s.%s", routing.WarRecognitionsPrefix, gameState.Player.Username),
 				gamelogic.RecognitionOfWar{ Attacker: move.Player, Defender: gameState.Player},
 			)
-			return pubsub.NackRequeue
+			if err != nil {
+				log.Printf("Failed to publish move outcome: %v\n", err)
+				return pubsub.NackRequeue
+			}
+			return pubsub.NackDiscard
+
+		case gamelogic.MoveOutcomeSamePlayer:
+			return pubsub.Ack
+
 		default:
 			return pubsub.NackDiscard
 		}

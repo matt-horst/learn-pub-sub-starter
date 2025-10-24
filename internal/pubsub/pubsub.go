@@ -110,7 +110,6 @@ func SubscribeJSON[T any] (
 
 			switch ack {
 			case Ack:
-				fmt.Println("Message delivered: Ack")
 				err = d.Ack(false)
 				if err != nil {
 					log.Printf("Failed to ack delivery: %v", err)
@@ -118,7 +117,6 @@ func SubscribeJSON[T any] (
 				}
 
 			case NackRequeue:
-				fmt.Println("Message delivered: NackRequeue")
 				err = d.Nack(false, true)
 				if err != nil {
 					log.Printf("Failed to nack delivery: %v", err)
@@ -126,7 +124,6 @@ func SubscribeJSON[T any] (
 				}
 
 			case NackDiscard:
-				fmt.Println("Message delivered: NackDiscard")
 				err = d.Nack(false, false)
 				if err != nil {
 					log.Printf("Failed to nack delivery: %v", err)
