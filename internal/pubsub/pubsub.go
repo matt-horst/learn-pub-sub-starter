@@ -37,8 +37,6 @@ func PublishJSON[T any] (ch *ampq.Channel, exchange, key string, val T) error {
 		return fmt.Errorf("Failed to publish: %v", err)
 	}
 
-	fmt.Printf("Publishing json: %v\n", string(json))
-
 	return nil
 }
 
