@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	ampq "github.com/rabbitmq/amqp091-go"
 )
 
@@ -60,16 +59,19 @@ func DeclareAndBind(
 		return nil, ampq.Queue{}, fmt.Errorf("Failed to create channel: %v", err)
 	}
 
-	isDurable := queueType == Durable
-	isAutoDelete := queueType == Transient
-	isExclusive := queueType == Transient
-	table := ampq.Table {"x-dead-letter-exchange": routing.ExchangePerilDlx}
-	q, err := ch.QueueDeclare(queueName, isDurable, isAutoDelete, isExclusive, false, table)
+	q, err := ch.QueueDeclare(
+		queueName,
+		queueType == Durable,
+		queueType != Durable,
+		queueType != Durable,
+		false,
+		ampq.Table{"x-dead-letter-exchange": "peril_dlx"},
+	)
 	if err != nil {
 		return nil, ampq.Queue{}, fmt.Errorf("Failed to declare queue: %v", err)
 	}
 
-	err = ch.QueueBind(queueName, key, exchange, false, nil)
+	err = ch.QueueBind(q.Name, key, exchange, false, nil)
 	if err != nil {
 		return nil, ampq.Queue{}, fmt.Errorf("Failed to bind queue: %v", err)
 	}
