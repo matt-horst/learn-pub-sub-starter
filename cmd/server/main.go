@@ -27,16 +27,14 @@ func main() {
 		log.Fatalf("Failed to create channel: %v\n", err)
 	}
 
-	_, _, err =pubsub.DeclareAndBind(
+	pubsub.SubscribeGob(
 		conn,
 		routing.ExchangePerilTopic,
 		routing.GameLogSlug,
 		fmt.Sprintf("%s.*", routing.GameLogSlug),
 		pubsub.Durable,
+		handlerGameLog,
 	)
-	if err != nil {
-		log.Fatalf("Failed to declare and bind to topic exchange: %v\n", err)
-	}
 
 	gamelogic.PrintServerHelp()
 
@@ -75,4 +73,16 @@ func main() {
 	}
 
 	fmt.Println("Server shutting down...")
+}
+
+func handlerGameLog(gl routing.GameLog) pubsub.AckType {
+	defer fmt.Print("> ")
+
+	err := gamelogic.WriteLog(gl)
+	if err != nil {
+		log.Printf("Failed to write log: %v\n", err)
+		return pubsub.NackRequeue
+	}
+
+	return pubsub.Ack
 }

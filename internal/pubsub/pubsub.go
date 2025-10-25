@@ -108,6 +108,32 @@ func DeclareAndBind(
 	return ch, q, nil
 }
 
+func SubscribeGob[T any] (
+	conn *ampq.Connection,
+	exchange string,
+	queueName string,
+	key string,
+	queueType SimpleQueueType,
+	handler func(T) AckType,
+) error {
+	return subscribe(
+		conn,
+		exchange,
+		queueName,
+		key,
+		queueType,
+		handler,
+		func(b []byte) (T, error) {
+			buf := bytes.NewBuffer(b)
+			decoder := gob.NewDecoder(buf)
+			var t T
+			err := decoder.Decode(&t)
+
+			return t, err
+		},
+	)
+}
+
 func SubscribeJSON[T any] (
 	conn *ampq.Connection,
 	exchange string,
@@ -115,6 +141,30 @@ func SubscribeJSON[T any] (
 	key string,
 	queueType SimpleQueueType,
 	handler func(T) AckType,
+) error {
+	return subscribe(
+		conn,
+		exchange,
+		queueName,
+		key,
+		queueType,
+		handler,
+		func(b []byte) (T, error) {
+			var t T
+			err := json.Unmarshal(b, &t)
+			return t, err
+		},
+	)
+}
+
+func subscribe[T any](
+	conn *ampq.Connection,
+	exchange string,
+	queueName string,
+	key string,
+	queueType SimpleQueueType,
+	handler func(T) AckType,
+	unmarshaller func([]byte) (T, error),
 ) error {
 	ch, _, err := DeclareAndBind(conn, exchange, queueName, key, queueType)
 	if err != nil {
@@ -128,8 +178,7 @@ func SubscribeJSON[T any] (
 
 	go func() {
 		for d := range ds {
-			var t T
-			err := json.Unmarshal(d.Body, &t)
+			t, err := unmarshaller(d.Body)
 			if err != nil {
 				log.Printf("Failed to decode json: %v", err)
 				continue
