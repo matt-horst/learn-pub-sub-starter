@@ -169,6 +169,11 @@ func subscribe[T any](
 		return fmt.Errorf("Failed to declare and bind: %v", err)
 	}
 
+	err = ch.Qos(10, 0, false)
+	if err != nil {
+		return fmt.Errorf("Failed to set prefetch size: %v\n", err)
+	}
+
 	ds, err := ch.Consume(queueName, "", false, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("Failed to consume queue: %v", err)
