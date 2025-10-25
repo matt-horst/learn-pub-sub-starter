@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
@@ -115,7 +116,30 @@ func main() {
 			gamelogic.PrintClientHelp()
 
 		case "spam":
-			fmt.Println("Spamming not allowed yet!")
+			if len(input) < 2 {
+				fmt.Println("Needs count")
+				continue
+			}
+
+			count, err := strconv.Atoi(input[1])
+			if err != nil {
+				fmt.Printf("Couldnt convert to an integer: %v", input[1])
+				continue
+			}
+
+			for range count {
+				msg := gamelogic.GetMaliciousLog()
+
+				err := publishGameLog(ch, routing.GameLog{
+					CurrentTime: time.Now(),
+					Username: userName,
+					Message: msg,
+				})
+				if err != nil {
+					log.Printf("Failed to publish game log: %v\n", err)
+					continue
+				}
+			}
 
 		case "quit":
 			gamelogic.PrintQuit()
@@ -214,7 +238,6 @@ func handlerWarMessages(gameState *gamelogic.GameState, ch *ampq.Channel) func(g
 
 
 func publishGameLog(ch *ampq.Channel, gl routing.GameLog) error {
-	fmt.Printf("Attempting to publish game log: %v\n", gl)
 	return pubsub.PublishGob(
 		ch,
 		routing.ExchangePerilTopic,

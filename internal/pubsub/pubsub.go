@@ -12,7 +12,6 @@ import (
 )
 
 type SimpleQueueType int
-
 const (
 	Durable SimpleQueueType = iota
 	Transient
@@ -26,7 +25,6 @@ const (
 )
 
 func PublishGob[T any] (ch *ampq.Channel, exchange, key string, val T) error {
-	fmt.Printf("Attempting to publish gob: %v\n", val)
 	var buf bytes.Buffer
 	encoder := gob.NewEncoder(&buf)
 	err := encoder.Encode(val)
