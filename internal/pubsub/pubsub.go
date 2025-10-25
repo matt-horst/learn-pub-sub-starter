@@ -1,7 +1,9 @@
 package pubsub
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -22,6 +24,33 @@ const (
 	NackRequeue
 	NackDiscard
 )
+
+func PublishGob[T any] (ch *ampq.Channel, exchange, key string, val T) error {
+	fmt.Printf("Attempting to publish gob: %v\n", val)
+	var buf bytes.Buffer
+	encoder := gob.NewEncoder(&buf)
+	err := encoder.Encode(val)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal object: %v", err)
+	}
+
+	err = ch.PublishWithContext(
+		context.Background(),
+		exchange,
+		key,
+		false,
+		false,
+		ampq.Publishing{
+			ContentType: "application/gob",
+			Body: buf.Bytes(),
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("Failed to publish: %v", err)
+	}
+
+	return nil
+}
 
 func PublishJSON[T any] (ch *ampq.Channel, exchange, key string, val T) error {
 	json, err := json.Marshal(val)
